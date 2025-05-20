@@ -1,0 +1,1346 @@
+
+<!DOCTYPE html>
+
+<html lang="es">
+<head>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.1/xlsx.full.min.js">
+function exportarExcel() {
+  const rows = [['Hora de Parada', 'Hora de Marcha', 'Duración (min)', 'Justificación']];
+  const filas = tablaEventos.querySelectorAll('tr');
+
+  filas.forEach(tr => {
+    const celdas = tr.querySelectorAll('td');
+    if (celdas.length >= 4) {
+      const parada = celdas[0].textContent.trim();
+      const marcha = celdas[1].textContent.trim();
+      const duracion = celdas[2].textContent.trim();
+      const justificacion = celdas[3].textContent.trim();
+      rows.push([parada, marcha, duracion, justificacion]);
+    }
+  });
+
+  rows.unshift([]);
+  rows.unshift(['Duración total en Parada (min)', Math.floor(tiempoParada / 60)]);
+  rows.unshift(['Duración total en Marcha (min)', Math.floor(tiempoMarcha / 60)]);
+  rows.unshift(['Turno', datosTurnoConfirmados.turno]);
+  rows.unshift(['Jefe', datosTurnoConfirmados.jefe]);
+  rows.unshift(['Mecánico', datosTurnoConfirmados.mecanico]);
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Eventos');
+  XLSX.writeFile(wb, 'registro_produccion.xlsx');
+
+  // Reiniciar todo y regresar a login
+  tiempoMarcha = 0;
+  tiempoParada = 0;
+  document.getElementById("tiempoMarcha").textContent = "0 min";
+  document.getElementById("tiempoParada").textContent = "0 min";
+  tablaEventos.innerHTML = "";
+  document.querySelector("#historialTabla tbody").innerHTML = "";
+  localStorage.removeItem("tablaEventos");
+  localStorage.removeItem("tiempoMarcha");
+  localStorage.removeItem("tiempoParada");
+
+  
+  // Limpiar datos del turno
+  datosTurnoConfirmados = { mecanico: "", jefe: "", turno: "" };
+  document.getElementById("mecanico").selectedIndex = 0;
+  document.getElementById("jefe").selectedIndex = 0;
+  document.getElementById("turno").selectedIndex = 0;
+
+  document.getElementById("mainContainer").classList.remove("active");
+  document.getElementById("loginContainer").classList.add("active");
+}
+
+
+function exportarHistorial() {
+  const filas = document.querySelector("#historialTabla tbody").querySelectorAll("tr");
+  if (filas.length === 0) return;
+
+  const rows = [['Fecha', 'Mecánico', 'Jefe', 'Turno', 'Hora Parada', 'Hora Marcha', 'Justificación']];
+  filas.forEach(tr => {
+    const celdas = tr.querySelectorAll('td');
+    const fecha = new Date().toLocaleDateString();
+    const mecanico = datosTurnoConfirmados.mecanico;
+    const jefe = datosTurnoConfirmados.jefe;
+    const turno = celdas[0].textContent.trim();
+    const parada = celdas[1].textContent.trim();
+    const marcha = celdas[2].textContent.trim();
+    const justificacion = celdas[3].textContent.trim();
+    rows.push([fecha, mecanico, jefe, turno, parada, marcha, justificacion]);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Historial');
+  const fechaHora = new Date().toISOString().replace(/[:.]/g, '-');
+  XLSX.writeFile(wb, `historial_turno_${fechaHora}.xlsx`);
+
+  // Reiniciar todo y volver a login
+  tiempoMarcha = 0;
+  tiempoParada = 0;
+  document.getElementById("tiempoMarcha").textContent = "0 min";
+  document.getElementById("tiempoParada").textContent = "0 min";
+  tablaEventos.innerHTML = "";
+  document.querySelector("#historialTabla tbody").innerHTML = "";
+  localStorage.removeItem("tablaEventos");
+  localStorage.removeItem("tiempoMarcha");
+  localStorage.removeItem("tiempoParada");
+
+  
+  // Limpiar datos del turno
+  datosTurnoConfirmados = { mecanico: "", jefe: "", turno: "" };
+  document.getElementById("mecanico").selectedIndex = 0;
+  document.getElementById("jefe").selectedIndex = 0;
+  document.getElementById("turno").selectedIndex = 0;
+
+  document.getElementById("mainContainer").classList.remove("active");
+  document.getElementById("loginContainer").classList.add("active");
+}
+
+</script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Sistema de Monitoreo Doria</title>
+<body>
+
+<!-- Indicador de marcha/parada siempre visible -->
+<div style="position: fixed; bottom: 10px; left: 10px; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.2); z-index: 9999;">
+<strong>Tiempo en Marcha:</strong> <span id="tiempoMarcha">0 min</span><br/>
+<strong>Tiempo en Parada:</strong> <span id="tiempoParada">0 min</span>
+</div>
+<style>
+    body { font-family: Arial, sans-serif; background: #eef2f7; margin: 0; padding: 0; }
+    .login-container, .main-container { display: none; justify-content: center; align-items: center; flex-direction: column; min-height: 100vh; }
+    .login-container.active, .main-container.active { display: flex; }
+    .login-box { background: white; padding: 20px; border-radius: 10px; box-shadow: 0px 0px 10px rgba(0,0,0,0.1); text-align: center; }
+    input { margin: 5px; padding: 10px; width: 200px; }
+    button { padding: 10px 20px; margin: 5px; border: none; border-radius: 5px; }
+    .start { background-color: #007BFF; color: white; }
+    .stop { background-color: #dc3545; color: white; }
+    .download { background-color: #28a745; color: white; }
+    table { width: 90%; margin-top: 20px; background: white; border-collapse: collapse; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    th { background-color: #007BFF; color: white; }
+    canvas { background: white; margin-top: 20px; }
+  </style>
+
+
+</head>
+<body>
+<div class="login-container active" id="loginContainer">
+<div class="login-box">
+<img alt="Logo" src="logo-doria.png" width="300"/>
+<h2>Bienvenido</h2>
+<input id="username" placeholder="Usuario" type="text"/><br/>
+<input id="password" placeholder="Contraseña" type="password"/><br/>
+<button onclick="login()">Ingresar</button>
+<button onclick="register()">Registrar Usuario</button>
+</div>
+</div>
+<div class="main-container" id="mainContainer">
+
+<style>
+          body {
+      font-family: Arial, sans-serif;
+      background: #eef6ff;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .video-container {
+  flex-shrink: 0;
+}
+
+video {
+  width: 50%;
+  height: auto;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+    }
+    
+    #justification-container {
+      margin-top: 350px;
+      width: 80%;
+      max-height: 500px;
+      overflow-y: auto;
+    }
+    #table-container{
+      width: 100%;
+      margin-top: 20px;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 8px;
+      border: 1px solid #ccc;
+      text-align: center;
+    }
+    .status {
+      text-align: center;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+    .exportar {
+      margin-top: 20px;
+      display: block;
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .encabezado {
+  display: flex;
+  align-items: center;     /* Centra verticalmente */
+  gap: 20px;               /* Espacio entre logo y texto */
+  padding: 10px 20px;
+}
+
+.logo {
+  width: 120px;
+}
+
+.info {
+  flex: 1;                 /* Ocupa el resto del espacio */
+  text-align: left;        /* Opcional: puede ser center si prefieres */
+}
+#estado {
+  font-size: 2rem;
+  margin: 20px;
+}
+#video-container {
+  width: 300px;          /* Ajusta el tamaño del video */
+  margin-left: 20px;     /* Espacio entre el texto y el video */
+}
+.muñeco {
+      position: absolute;
+      left: 10px;
+      top: 70%;
+      transform: translateY(-50%);
+      width: 320px;
+      z-index: 2;
+    }
+    .estado-parada {
+  background-color: #dc3545; /* rojo */
+  color: white;
+  font-weight: bold;
+  padding: 10px;
+  border-radius: 8px;
+  transition: background-color 0.3s;
+}
+
+.estado-marcha {
+  background-color: #28a745; /* verde */
+  color: white;
+  font-weight: bold;
+  padding: 10px;
+  border-radius: 8px;
+  transition: background-color 0.3s;
+}
+ #reloj { position: absolute; top: 10px; right: 20px; font-size: 20px; }
+.configuracion {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.configuracion input {
+  padding: 5px;
+  width: 60px;
+  margin-right: 10px;
+}
+
+.configuracion button {
+  padding: 5px 10px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+#graficosOEE {
+  /* Ajustar la altura del contenedor */
+  height: auto; 
+}
+#graficosOEE {
+  display: flex;
+  gap: 40px;
+  justify-content: center;
+  margin: 20px 0;
+  max-width: 10%; /* Limitar el tamaño del contenedor */
+}
+#graficosOEE canvas {
+  flex-shrink: 0;   /* Evitar que los elementos se encojan */
+  max-width: 150px; /* Limitar el tamaño máximo del canvas */
+}
+
+
+
+</style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<div class="encabezado">
+<img alt="Logo" class="logo" src="logo-doria.png"/>
+<div class="info">
+<h1 style="color: rgb(17, 1, 1);">CONTROL DE TIEMPOS CELDAS ROBÓTICAS</h1>
+<div class="configuracion">
+<label for="intervalo">Intervalo de Detección (segundos):</label>
+<input id="intervalo" min="1" type="number" value="10"/>
+<button onclick="ajustarIntervalo()">Ajustar</button>
+<!-- Control de sensibilidad -->
+<label for="sensibilidad">Sensibilidad de Detección:</label>
+<input id="sensibilidad" max="1000" min="100" step="10" type="range" value="5000"/>
+<span id="sensibilidadValor">5000</span> <!-- Mostrar valor actual de sensibilidad -->
+</div>
+<label>Mecánico:</label>
+<select id="mecanico">
+   <option>Kevin mendoza </option>
+   <option>Valeria Mejia </option>
+   <option>Cristian Torres </option>
+   <option>Cristian Rivera</option>
+   <option>Jhoimer Espinosa </option>
+</select><br/>
+<label>Turno:</label>
+<select id="turno">
+<option>Turno 1 </option>
+<option>Turno 2 </option>
+<option>Turno 3 </option>
+</select><br/>
+<label>Jefe:</label>
+<select id="jefe">
+  <option>Juan Gabriel Sastoque </option>
+      <option>Carlos Duarte </option>
+      <option>Nelson Gusman</option>
+</select>
+</div>
+<div style="margin-top: 20px; text-align: center;">
+<button id="btnConfirmarDatos" style="padding: 10px 20px; background-color: #ffc107; color: black; border: none; border-radius: 5px; font-size: 16px; cursor: pointer;">
+    Confirmar Datos del Turno
+  </button>
+</div>
+<script>
+  let datosTurnoConfirmados = { mecanico: "", jefe: "", turno: "" };
+  document.getElementById("btnConfirmarDatos").addEventListener("click", () => {
+    const mecanico = document.getElementById("mecanico").value;
+    const jefe = document.getElementById("jefe").value;
+    const turno = document.getElementById("turno").value;
+    datosTurnoConfirmados = { mecanico, jefe, turno };
+    alert("Datos del turno confirmados:\nMecánico: " + mecanico + "\nJefe: " + jefe + "\nTurno: " + turno);
+  });
+
+function exportarExcel() {
+  const rows = [['Hora de Parada', 'Hora de Marcha', 'Duración (min)', 'Justificación']];
+  const filas = tablaEventos.querySelectorAll('tr');
+
+  filas.forEach(tr => {
+    const celdas = tr.querySelectorAll('td');
+    if (celdas.length >= 4) {
+      const parada = celdas[0].textContent.trim();
+      const marcha = celdas[1].textContent.trim();
+      const duracion = celdas[2].textContent.trim();
+      const justificacion = celdas[3].textContent.trim();
+      rows.push([parada, marcha, duracion, justificacion]);
+    }
+  });
+
+  rows.unshift([]);
+  rows.unshift(['Duración total en Parada (min)', Math.floor(tiempoParada / 60)]);
+  rows.unshift(['Duración total en Marcha (min)', Math.floor(tiempoMarcha / 60)]);
+  rows.unshift(['Turno', datosTurnoConfirmados.turno]);
+  rows.unshift(['Jefe', datosTurnoConfirmados.jefe]);
+  rows.unshift(['Mecánico', datosTurnoConfirmados.mecanico]);
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Eventos');
+  XLSX.writeFile(wb, 'registro_produccion.xlsx');
+
+  // Reiniciar todo y regresar a login
+  tiempoMarcha = 0;
+  tiempoParada = 0;
+  document.getElementById("tiempoMarcha").textContent = "0 min";
+  document.getElementById("tiempoParada").textContent = "0 min";
+  tablaEventos.innerHTML = "";
+  document.querySelector("#historialTabla tbody").innerHTML = "";
+  localStorage.removeItem("tablaEventos");
+  localStorage.removeItem("tiempoMarcha");
+  localStorage.removeItem("tiempoParada");
+
+  
+  // Limpiar datos del turno
+  datosTurnoConfirmados = { mecanico: "", jefe: "", turno: "" };
+  document.getElementById("mecanico").selectedIndex = 0;
+  document.getElementById("jefe").selectedIndex = 0;
+  document.getElementById("turno").selectedIndex = 0;
+
+  document.getElementById("mainContainer").classList.remove("active");
+  document.getElementById("loginContainer").classList.add("active");
+}
+
+
+function exportarHistorial() {
+  const filas = document.querySelector("#historialTabla tbody").querySelectorAll("tr");
+  if (filas.length === 0) return;
+
+  const rows = [['Fecha', 'Mecánico', 'Jefe', 'Turno', 'Hora Parada', 'Hora Marcha', 'Justificación']];
+  filas.forEach(tr => {
+    const celdas = tr.querySelectorAll('td');
+    const fecha = new Date().toLocaleDateString();
+    const mecanico = datosTurnoConfirmados.mecanico;
+    const jefe = datosTurnoConfirmados.jefe;
+    const turno = celdas[0].textContent.trim();
+    const parada = celdas[1].textContent.trim();
+    const marcha = celdas[2].textContent.trim();
+    const justificacion = celdas[3].textContent.trim();
+    rows.push([fecha, mecanico, jefe, turno, parada, marcha, justificacion]);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Historial');
+  const fechaHora = new Date().toISOString().replace(/[:.]/g, '-');
+  XLSX.writeFile(wb, `historial_turno_${fechaHora}.xlsx`);
+
+  // Reiniciar todo y volver a login
+  tiempoMarcha = 0;
+  tiempoParada = 0;
+  document.getElementById("tiempoMarcha").textContent = "0 min";
+  document.getElementById("tiempoParada").textContent = "0 min";
+  tablaEventos.innerHTML = "";
+  document.querySelector("#historialTabla tbody").innerHTML = "";
+  localStorage.removeItem("tablaEventos");
+  localStorage.removeItem("tiempoMarcha");
+  localStorage.removeItem("tiempoParada");
+
+  
+  // Limpiar datos del turno
+  datosTurnoConfirmados = { mecanico: "", jefe: "", turno: "" };
+  document.getElementById("mecanico").selectedIndex = 0;
+  document.getElementById("jefe").selectedIndex = 0;
+  document.getElementById("turno").selectedIndex = 0;
+
+  document.getElementById("mainContainer").classList.remove("active");
+  document.getElementById("loginContainer").classList.add("active");
+}
+
+</script>
+<div id="reloj"></div>
+<body>
+<img alt="Muñeco" class="muñeco" id="muñeco" src="feliz.gif"/>
+
+<script>
+let chartOEE, chartDisponibilidad, chartRendimiento, chartCalidad;
+let rendimientoManual = 0.99;
+let calidadManual = 0.99;
+
+function crearGauge(canvasId, valor, color, label) {
+  return new Chart(document.getElementById(canvasId).getContext('2d'), {
+    type: 'doughnut',
+    data: {
+      labels: [label, ''],
+      datasets: [{
+        data: [valor, 100 - valor],
+        backgroundColor: [color, '#e0e0e0'],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      rotation: -90,
+      circumference: 180,
+      cutout: '30%',
+      plugins: {
+        tooltip: { enabled: false },
+        legend: { display: false },
+        title: {
+          display: true,
+          text: `${label}: ${valor.toFixed(2)}%`,
+          font: { size: 14 }
+        }
+      }
+    }
+  });
+}
+
+function actualizarGraficosOEE() {
+  const totalTiempo = tiempoMarcha + tiempoParada;
+  const disponibilidad = totalTiempo > 0 ? (tiempoMarcha / totalTiempo) : 0;
+  const rendimiento = rendimientoManual;
+  const calidad = calidadManual;
+  const oee = disponibilidad * rendimiento * calidad;
+
+  const dispPct = disponibilidad * 100;
+  const rendPct = rendimiento * 100;
+  const calPct = calidad * 100;
+  const oeePct = oee * 100;
+
+  chartOEE?.destroy();
+  chartDisponibilidad?.destroy();
+  chartRendimiento?.destroy();
+  chartCalidad?.destroy();
+
+  chartOEE = crearGauge("graficoOEE", oeePct, "#dc3545", "OEE");
+  chartDisponibilidad = crearGauge("graficoDisponibilidad", dispPct, "#ffc107", "Disponibilidad");
+  chartRendimiento = crearGauge("graficoRendimiento", rendPct, "#17a2b8", "Rendimiento");
+  chartCalidad = crearGauge("graficoCalidad", calPct, "#28a745", "Calidad");
+}
+
+setInterval(actualizarGraficosOEE, 10000);
+</script></body><script src="https://cdn.jsdelivr.net/npm/chart.js"></script></head>
+<body>
+</script>
+</body></div>
+<video autoplay="" height="240" id="video" muted="" width="320"></video>
+<canvas height="240" id="canvas" style="display: none;" width="320"></canvas>
+<div class="status" id="estado">Estado: Detectando...</div>
+<div id="graficosOEE" style="display: flex; gap: 40px; justify-content: center; margin: 20px 0;">
+  <canvas id="graficoOEE" width="150" height="150"></canvas>
+  <canvas id="graficoDisponibilidad" width="150" height="150"></canvas>
+  <canvas id="graficoRendimiento" width="150" height="150"></canvas>
+  <canvas id="graficoCalidad" width="150" height="150"></canvas>
+</div>
+
+<table>
+<table>
+<thead>
+<tr>
+<th>Hora de Parada</th>
+<th>Hora de Marcha</th>
+<th>Duración</th>
+<th>Justificación</th>
+<th>Confirmar</th>
+</tr>
+</thead>
+<tbody id="tablaEventos"></tbody>
+</table>
+<button class="exportar" onclick="exportarExcel()">Finalizar</button>
+<script>
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
+  const context = canvas.getContext('2d');
+  const estado = document.getElementById('estado');
+  const muñeco = document.getElementById('muñeco');
+  const tablaEventos = document.getElementById('tablaEventos');
+  const reloj = document.getElementById('reloj');
+const sensibilidadInput = document.getElementById('sensibilidad');
+let umbralSensibilidad = parseInt(sensibilidadInput.value);
+
+// Evento que actualiza el valor de la sensibilidad cuando se mueve el control deslizante
+sensibilidadInput.addEventListener('input', function() {
+  sensibilidadValor.textContent = sensibilidadInput.value;
+  sensibilidadInput.addEventListener('input', function() {
+  umbralSensibilidad = parseInt(sensibilidadInput.value);  // Actualizar umbral al mover el control
+  sensibilidadValor.textContent = sensibilidadInput.value;  // Mostrar valor actualizado
+});
+});
+
+
+  let previousImageData = null;
+  let estadoActual = 'marcha';
+  let horaParada = null;
+  function actualizarReloj() {
+      const ahora = new Date();
+      reloj.textContent = ahora.toLocaleString();
+    }
+    setInterval(actualizarReloj, 1000);
+
+
+  navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+    video.srcObject = stream;
+  });
+  let lastMovementTime = Date.now();  // Tiempo del último movimiento detectado
+  const timeThreshold = 500000; // 5 segundos para considerar como parada
+
+
+
+      function detectarMovimiento() {
+  context.drawImage(video, 0, 0, canvas.width, canvas.height);
+  const currentImageData = context.getImageData(0, 0, canvas.width, canvas.height);
+
+  if (previousImageData) {
+    let cambios = 0;
+    for (let i = 0; i < currentImageData.data.length; i += 4) {
+      const diff = Math.abs(currentImageData.data[i] - previousImageData.data[i]);
+      if (diff > 30) cambios++;  // Comparar diferencias pixel a pixel
+    }
+
+    // Usar el valor de sensibilidad ajustado
+    const sensibilidadMinima = umbralSensibilidad * 0.8;
+    if (cambios < sensibilidadMinima && estadoActual === 'marcha') {
+      estado.textContent = 'Estado: Parada';
+      estado.classList.remove('estado-marcha');
+      estado.classList.add('estado-parada');
+      horaParada = new Date().toLocaleTimeString();
+      estadoActual = 'parada';
+      muñeco.src = 'bravo.gif';
+    }
+
+    if (cambios >= umbralSensibilidad && estadoActual === 'parada') {
+      estado.textContent = 'Estado: Marcha';
+      estado.classList.remove('estado-parada');
+      estado.classList.add('estado-marcha');
+      const horaMarcha = new Date().toLocaleTimeString();
+      registrarEvento(horaParada, horaMarcha);
+      horaParada = null;
+      estadoActual = 'marcha';
+      muñeco.src = 'feliz.gif';
+    }
+  }
+
+  previousImageData = currentImageData;
+  }
+  function confirmarRegistro(btn) {
+  const fila = btn.closest('tr');
+  const select = fila.querySelector('select');
+  const justificacion = select.value;
+
+  if (!justificacion) {
+    alert('Por favor, selecciona una justificación antes de confirmar.');
+    return;
+  }
+
+  // Reemplazar el <select> por texto plano
+  const celdaJustificacion = select.parentElement;
+  celdaJustificacion.innerHTML = justificacion;
+
+  // Desactivar el botón
+  btn.remove();
+
+  // También actualizar el historial
+  const parada = fila.children[0].textContent.trim();
+  const marcha = fila.children[1].textContent.trim();
+  const historialFilas = document.querySelectorAll("#historialTabla tbody tr");
+  for (let hFila of historialFilas) {
+    if (hFila.children[1].textContent === parada && hFila.children[2].textContent === marcha) {
+      hFila.children[3].textContent = justificacion;
+      break;
+    }
+  }
+}
+  function registrarEvento(parada, marcha) {
+  const fila = document.createElement('tr');
+
+  // Convertimos "HH:mm:ss" a segundos totales
+  function horaAsegundos(horaStr) {
+    const [h, m, s] = horaStr.split(':').map(Number);
+    return h * 3600 + m * 60 + s;
+  }
+
+  const segundosParada = horaAsegundos(parada);
+  const segundosMarcha = horaAsegundos(marcha);
+  let duracionSegundos = segundosMarcha - segundosParada;
+
+  if (duracionSegundos < 0) duracionSegundos += 24 * 3600; // Por si pasa de medianoche
+
+  const minutos = Math.floor(duracionSegundos / 60);
+  const segundos = duracionSegundos % 60;
+  const duracion = `${minutos} min ${segundos} seg`;
+
+  fila.innerHTML = `
+    <td>${parada}</td>
+    <td>${marcha}</td>
+    <td>${duracion}</td>
+    <td>
+        <select>
+          <option value="">Seleccionar...</option>
+          <option>Producto no conforme</option>
+          <option>Falla mecánica</option>
+          <option>Falla eléctrica</option>
+          <option>Descarte</option>
+          <option>Stickers</option>
+          <option>Secuencia de producto</option>
+          <option>acumulacion de paquetes </option>
+          <option>bloquedo de chequeador </option>
+        </select>
+      </td>
+      <td>
+            <button onclick="confirmarRegistro(this)">Confirmar</button>
+            </td>
+    `;
+    
+   
+
+    tablaEventos.appendChild(fila);
+  const historial = document.getElementById("historialTabla").querySelector("tbody");
+  const filaHistorial = document.createElement("tr");
+  filaHistorial.innerHTML = `
+    <td>${datosTurnoConfirmados.turno}</td>
+    <td>${parada}</td>
+    <td>${marcha}</td>
+    <td></td>
+  `;
+  historial.appendChild(filaHistorial);
+
+  }
+
+  
+function exportarExcel() {
+  const rows = [['Hora de Parada', 'Hora de Marcha', 'Duración (min)', 'Justificación']];
+  const filas = tablaEventos.querySelectorAll('tr');
+
+  filas.forEach(tr => {
+    const celdas = tr.querySelectorAll('td');
+    if (celdas.length >= 4) {
+      const parada = celdas[0].textContent.trim();
+      const marcha = celdas[1].textContent.trim();
+      const duracion = celdas[2].textContent.trim();
+      const justificacion = celdas[3].textContent.trim();
+      rows.push([parada, marcha, duracion, justificacion]);
+    }
+  });
+
+  rows.unshift([]);
+  rows.unshift(['Duración total en Parada (min)', Math.floor(tiempoParada / 60)]);
+  rows.unshift(['Duración total en Marcha (min)', Math.floor(tiempoMarcha / 60)]);
+  rows.unshift(['Turno', datosTurnoConfirmados.turno]);
+  rows.unshift(['Jefe', datosTurnoConfirmados.jefe]);
+  rows.unshift(['Mecánico', datosTurnoConfirmados.mecanico]);
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Eventos');
+  XLSX.writeFile(wb, 'registro_produccion.xlsx');
+}
+
+  
+
+  setInterval(detectarMovimiento, 2000);
+
+function exportarExcel() {
+  const rows = [['Hora de Parada', 'Hora de Marcha', 'Duración (min)', 'Justificación']];
+  const filas = tablaEventos.querySelectorAll('tr');
+
+  filas.forEach(tr => {
+    const celdas = tr.querySelectorAll('td');
+    if (celdas.length >= 4) {
+      const parada = celdas[0].textContent.trim();
+      const marcha = celdas[1].textContent.trim();
+      const duracion = celdas[2].textContent.trim();
+      const justificacion = celdas[3].textContent.trim();
+      rows.push([parada, marcha, duracion, justificacion]);
+    }
+  });
+
+  rows.unshift([]);
+  rows.unshift(['Duración total en Parada (min)', Math.floor(tiempoParada / 60)]);
+  rows.unshift(['Duración total en Marcha (min)', Math.floor(tiempoMarcha / 60)]);
+  rows.unshift(['Turno', datosTurnoConfirmados.turno]);
+  rows.unshift(['Jefe', datosTurnoConfirmados.jefe]);
+  rows.unshift(['Mecánico', datosTurnoConfirmados.mecanico]);
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Eventos');
+  XLSX.writeFile(wb, 'registro_produccion.xlsx');
+
+  // Reiniciar todo y regresar a login
+  tiempoMarcha = 0;
+  tiempoParada = 0;
+  document.getElementById("tiempoMarcha").textContent = "0 min";
+  document.getElementById("tiempoParada").textContent = "0 min";
+  tablaEventos.innerHTML = "";
+  document.querySelector("#historialTabla tbody").innerHTML = "";
+  localStorage.removeItem("tablaEventos");
+  localStorage.removeItem("tiempoMarcha");
+  localStorage.removeItem("tiempoParada");
+
+  
+  // Limpiar datos del turno
+  datosTurnoConfirmados = { mecanico: "", jefe: "", turno: "" };
+  document.getElementById("mecanico").selectedIndex = 0;
+  document.getElementById("jefe").selectedIndex = 0;
+  document.getElementById("turno").selectedIndex = 0;
+
+  document.getElementById("mainContainer").classList.remove("active");
+  document.getElementById("loginContainer").classList.add("active");
+}
+
+
+function exportarHistorial() {
+  const filas = document.querySelector("#historialTabla tbody").querySelectorAll("tr");
+  if (filas.length === 0) return;
+
+  const rows = [['Fecha', 'Mecánico', 'Jefe', 'Turno', 'Hora Parada', 'Hora Marcha', 'Justificación']];
+  filas.forEach(tr => {
+    const celdas = tr.querySelectorAll('td');
+    const fecha = new Date().toLocaleDateString();
+    const mecanico = datosTurnoConfirmados.mecanico;
+    const jefe = datosTurnoConfirmados.jefe;
+    const turno = celdas[0].textContent.trim();
+    const parada = celdas[1].textContent.trim();
+    const marcha = celdas[2].textContent.trim();
+    const justificacion = celdas[3].textContent.trim();
+    rows.push([fecha, mecanico, jefe, turno, parada, marcha, justificacion]);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Historial');
+  const fechaHora = new Date().toISOString().replace(/[:.]/g, '-');
+  XLSX.writeFile(wb, `historial_turno_${fechaHora}.xlsx`);
+
+  // Reiniciar todo y volver a login
+  tiempoMarcha = 0;
+  tiempoParada = 0;
+  document.getElementById("tiempoMarcha").textContent = "0 min";
+  document.getElementById("tiempoParada").textContent = "0 min";
+  tablaEventos.innerHTML = "";
+  document.querySelector("#historialTabla tbody").innerHTML = "";
+  localStorage.removeItem("tablaEventos");
+  localStorage.removeItem("tiempoMarcha");
+  localStorage.removeItem("tiempoParada");
+
+  
+  // Limpiar datos del turno
+  datosTurnoConfirmados = { mecanico: "", jefe: "", turno: "" };
+  document.getElementById("mecanico").selectedIndex = 0;
+  document.getElementById("jefe").selectedIndex = 0;
+  document.getElementById("turno").selectedIndex = 0;
+
+  document.getElementById("mainContainer").classList.remove("active");
+  document.getElementById("loginContainer").classList.add("active");
+}
+
+</script>
+</body>
+</html>
+<script>
+  const users = JSON.parse(localStorage.getItem('users')) || [{ username: 'admin', password: '1234' }];
+
+  function login() {
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    const user = users.find(u => u.username === username && u.password === password);
+    if (user) {
+      document.getElementById('loginContainer').classList.remove('active');
+      document.getElementById('mainContainer').classList.add('active');
+    } else {
+      alert('Usuario o contraseña incorrectos.');
+    }
+  }
+
+  function register() {
+    const username = prompt('Nuevo usuario:');
+    const password = prompt('Nueva contraseña:');
+    users.push({ username, password });
+    localStorage.setItem('users', JSON.stringify(users));
+    alert('Usuario registrado.');
+  }
+
+  let startTime, endTime;
+  let justificationData = [];
+  let machineStateData = [];
+
+  function startMachine() {
+    startTime = new Date();
+  }
+
+  function stopMachine() {
+    endTime = new Date();
+    let duration = Math.floor((endTime - startTime) / 100);
+    justificationData.push({
+      start: startTime.toLocaleTimeString(),
+      end: endTime.toLocaleTimeString(),
+      duration: duration > 60 ? `${Math.floor(duration/60)}:${duration%60} min` : `${duration} seg`
+    });
+    renderJustifications();
+    updateChart();
+  }
+
+  function renderJustifications() {
+    const tbody = document.getElementById('justificationTable').querySelector('tbody');
+    tbody.innerHTML = '';
+    justificationData.forEach((item, index) => {
+      const row = `<tr>
+        <td><button onclick="justify(${index})">Justificar</button></td>
+        <td>${item.start}</td>
+        <td>${item.end}</td>
+        <td>${item.duration}</td>
+      </tr>`;
+      tbody.innerHTML += row;
+    });
+  }
+
+  function justify(index) {
+    const cause = prompt('Causa de justificación:');
+       const associated = prompt('Causa asociada:');
+    const waste = prompt('Desperdicio (gr):');
+    machineStateData.push({
+      duration: justificationData[index].duration,
+      cause, associated, waste
+    });
+    renderMachineStates();
+  }
+
+  function renderMachineStates() {
+    const tbody = document.getElementById('machineStateTable').querySelector('tbody');
+    tbody.innerHTML = '';
+    machineStateData.forEach(item => {
+      const row = `<tr>
+        <td>${item.duration}</td>
+        <td>${item.cause}</td>
+        <td>${item.associated}</td>
+        <td>${item.waste}</td>
+      </tr>`;
+      tbody.innerHTML += row;
+    });
+  }
+
+  let chart;
+
+  function updateChart() {
+    const totalEvents = justificationData.length;
+    const availability = totalEvents > 0 ? 100 - (totalEvents * 5) : 100;
+
+    if (chart) {
+      chart.destroy();
+    }
+
+    const ctx = document.getElementById('oeeChart').getContext('2d');
+    chart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Disponibilidad', 'Pérdida'],
+        datasets: [{
+          data: [availability, 100-availability],
+          backgroundColor: ['#007BFF', '#dc3545']
+        }]
+      },
+      options: { responsive: true }
+    });
+  }
+
+
+
+function exportarExcel() {
+  const rows = [['Hora de Parada', 'Hora de Marcha', 'Duración (min)', 'Justificación']];
+  const filas = tablaEventos.querySelectorAll('tr');
+
+  filas.forEach(tr => {
+    const celdas = tr.querySelectorAll('td');
+    if (celdas.length >= 4) {
+      const parada = celdas[0].textContent.trim();
+      const marcha = celdas[1].textContent.trim();
+      const duracion = celdas[2].textContent.trim();
+      const justificacion = celdas[3].textContent.trim();
+      rows.push([parada, marcha, duracion, justificacion]);
+    }
+  });
+
+  rows.unshift([]);
+  rows.unshift(['Duración total en Parada (min)', Math.floor(tiempoParada / 60)]);
+  rows.unshift(['Duración total en Marcha (min)', Math.floor(tiempoMarcha / 60)]);
+  rows.unshift(['Turno', datosTurnoConfirmados.turno]);
+  rows.unshift(['Jefe', datosTurnoConfirmados.jefe]);
+  rows.unshift(['Mecánico', datosTurnoConfirmados.mecanico]);
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Eventos');
+  XLSX.writeFile(wb, 'registro_produccion.xlsx');
+
+  // Reiniciar todo y regresar a login
+  tiempoMarcha = 0;
+  tiempoParada = 0;
+  document.getElementById("tiempoMarcha").textContent = "0 min";
+  document.getElementById("tiempoParada").textContent = "0 min";
+  tablaEventos.innerHTML = "";
+  document.querySelector("#historialTabla tbody").innerHTML = "";
+  localStorage.removeItem("tablaEventos");
+  localStorage.removeItem("tiempoMarcha");
+  localStorage.removeItem("tiempoParada");
+
+  
+  // Limpiar datos del turno
+  datosTurnoConfirmados = { mecanico: "", jefe: "", turno: "" };
+  document.getElementById("mecanico").selectedIndex = 0;
+  document.getElementById("jefe").selectedIndex = 0;
+  document.getElementById("turno").selectedIndex = 0;
+
+  document.getElementById("mainContainer").classList.remove("active");
+  document.getElementById("loginContainer").classList.add("active");
+}
+
+
+function exportarHistorial() {
+  const filas = document.querySelector("#historialTabla tbody").querySelectorAll("tr");
+  if (filas.length === 0) return;
+
+  const rows = [['Fecha', 'Mecánico', 'Jefe', 'Turno', 'Hora Parada', 'Hora Marcha', 'Justificación']];
+  filas.forEach(tr => {
+    const celdas = tr.querySelectorAll('td');
+    const fecha = new Date().toLocaleDateString();
+    const mecanico = datosTurnoConfirmados.mecanico;
+    const jefe = datosTurnoConfirmados.jefe;
+    const turno = celdas[0].textContent.trim();
+    const parada = celdas[1].textContent.trim();
+    const marcha = celdas[2].textContent.trim();
+    const justificacion = celdas[3].textContent.trim();
+    rows.push([fecha, mecanico, jefe, turno, parada, marcha, justificacion]);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Historial');
+  const fechaHora = new Date().toISOString().replace(/[:.]/g, '-');
+  XLSX.writeFile(wb, `historial_turno_${fechaHora}.xlsx`);
+
+  // Reiniciar todo y volver a login
+  tiempoMarcha = 0;
+  tiempoParada = 0;
+  document.getElementById("tiempoMarcha").textContent = "0 min";
+  document.getElementById("tiempoParada").textContent = "0 min";
+  tablaEventos.innerHTML = "";
+  document.querySelector("#historialTabla tbody").innerHTML = "";
+  localStorage.removeItem("tablaEventos");
+  localStorage.removeItem("tiempoMarcha");
+  localStorage.removeItem("tiempoParada");
+
+  
+  // Limpiar datos del turno
+  datosTurnoConfirmados = { mecanico: "", jefe: "", turno: "" };
+  document.getElementById("mecanico").selectedIndex = 0;
+  document.getElementById("jefe").selectedIndex = 0;
+  document.getElementById("turno").selectedIndex = 0;
+
+  document.getElementById("mainContainer").classList.remove("active");
+  document.getElementById("loginContainer").classList.add("active");
+}
+
+</script>
+<button id="btnZoom" onclick="hacerZoom()" style="
+  position: fixed;
+  top: 50%;
+  right: 20px;
+  transform: translateY(-50%);
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 16px;
+  cursor: pointer;
+  font-size: 18px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  z-index: 9999;
+" title="Ampliar video">
+<i class="fas fa-search-plus" id="zoomIcon"></i>
+</button>
+<!-- Contador de marcha/parada -->
+<div style="position: fixed; bottom: 10px; left: 10px; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.2);">
+  <strong>Tiempo en Marcha:</strong> <span id="tiempoMarcha">0 min</span><br>
+  <strong>Tiempo en Parada:</strong> <span id="tiempoParada">0 min</span>
+</div>
+
+<!-- Historial -->
+<div id="historial" style="padding: 20px;">
+  <h2>Historial por Turno</h2>
+  <table id="historialTabla" borde="1" style="background: white;">
+    <thead><tr><th>Turno</th><th>Hora Parada</th><th>Hora Marcha</th><th>Justificación</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <button onclick="exportarHistorial()">Exportar Historial</button>
+</div>
+
+<script>
+// Variables acumuladas
+let tiempoMarcha = 0;
+let tiempoParada = 0;
+let ultimoCambio = Date.now();
+let estadoAnterior = 'marcha';
+
+// Intervalo de actualización de contadores
+setInterval(() => {
+  if (estadoActual === 'marcha') tiempoMarcha += 1;
+  else tiempoParada += 1;
+  document.getElementById("tiempoMarcha").textContent = Math.floor(tiempoMarcha / 60) + " min";
+  document.getElementById("tiempoParada").textContent = Math.floor(tiempoParada / 60) + " min";
+}, 1000);
+
+// Guardar y recuperar del localStorage
+window.addEventListener('beforeunload', () => {
+  localStorage.setItem('tablaEventos', tablaEventos.innerHTML);
+  localStorage.setItem('tiempoMarcha', tiempoMarcha);
+  localStorage.setItem('tiempoParada', tiempoParada);
+});
+
+window.addEventListener('load', () => {
+  if (localStorage.getItem('tablaEventos')) {
+    tablaEventos.innerHTML = localStorage.getItem('tablaEventos');
+    tiempoMarcha = parseInt(localStorage.getItem('tiempoMarcha')) || 0;
+    tiempoParada = parseInt(localStorage.getItem('tiempoParada')) || 0;
+  }
+});
+
+function guardarHistorialAuto() {
+  const filas = document.querySelector("#historialTabla tbody").querySelectorAll("tr");
+  if (filas.length === 0) return;
+
+  const rows = [['Fecha', 'Mecánico', 'Jefe', 'Turno', 'Hora Parada', 'Hora Marcha', 'Justificación']];
+  filas.forEach(tr => {
+    const celdas = tr.querySelectorAll('td');
+    const fecha = new Date().toLocaleDateString();
+    const mecanico = datosTurnoConfirmados.mecanico;
+    const jefe = datosTurnoConfirmados.jefe;
+    const turno = celdas[0].textContent.trim();
+    const parada = celdas[1].textContent.trim();
+    const marcha = celdas[2].textContent.trim();
+    const justificacion = celdas[3].querySelector('select').value;
+    rows.push([fecha, mecanico, jefe, turno, parada, marcha, justificacion]);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Historial');
+  const fechaHora = new Date().toISOString().replace(/[:.]/g, '-');
+  XLSX.writeFile(wb, `historial_turno_${fechaHora}.xlsx`);
+}
+
+// Cierre automático de turnos
+setInterval(() => {
+  const ahora = new Date();
+  const hora = ahora.getHours();
+  const minuto = ahora.getMinutes();
+  const segundo = ahora.getSeconds();
+
+  const cierreTurnos = [
+    [13, 59, 59],  // Fin turno 1
+    [21, 59, 59],  // Fin turno 2
+    [5, 59, 59]    // Fin turno 3
+  ];
+
+  cierreTurnos.forEach(([h, m, s]) => {
+    if (hora === h && minuto === m && segundo === s) {
+      guardarHistorialAuto(); // Guardar el historial antes de borrar
+
+      tiempoMarcha = 0;
+      tiempoParada = 0;
+      document.getElementById("tiempoMarcha").textContent = "0 min";
+      document.getElementById("tiempoParada").textContent = "0 min";
+
+      tablaEventos.innerHTML = "";
+      localStorage.removeItem("tablaEventos");
+
+      const historialBody = document.querySelector("#historialTabla tbody");
+      historialBody.innerHTML = "";
+
+      localStorage.removeItem("tiempoMarcha");
+      localStorage.removeItem("tiempoParada");
+
+      
+  // Limpiar datos del turno
+  datosTurnoConfirmados = { mecanico: "", jefe: "", turno: "" };
+  document.getElementById("mecanico").selectedIndex = 0;
+  document.getElementById("jefe").selectedIndex = 0;
+  document.getElementById("turno").selectedIndex = 0;
+
+  document.getElementById("mainContainer").classList.remove("active");
+      setTimeout(() => {
+        document.getElementById("mainContainer").classList.add("active");
+      }, 1000);
+
+      alert("Fin de turno detectado. Contadores, eventos e historial reiniciados.");
+    }
+  });
+}, 1000);
+
+function exportarExcel() {
+  const rows = [['Hora de Parada', 'Hora de Marcha', 'Duración (min)', 'Justificación']];
+  const filas = tablaEventos.querySelectorAll('tr');
+
+  filas.forEach(tr => {
+    const celdas = tr.querySelectorAll('td');
+    if (celdas.length >= 4) {
+      const parada = celdas[0].textContent.trim();
+      const marcha = celdas[1].textContent.trim();
+      const duracion = celdas[2].textContent.trim();
+      const justificacion = celdas[3].textContent.trim();
+      rows.push([parada, marcha, duracion, justificacion]);
+    }
+  });
+
+  rows.unshift([]);
+  rows.unshift(['Duración total en Parada (min)', Math.floor(tiempoParada / 60)]);
+  rows.unshift(['Duración total en Marcha (min)', Math.floor(tiempoMarcha / 60)]);
+  rows.unshift(['Turno', datosTurnoConfirmados.turno]);
+  rows.unshift(['Jefe', datosTurnoConfirmados.jefe]);
+  rows.unshift(['Mecánico', datosTurnoConfirmados.mecanico]);
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Eventos');
+  XLSX.writeFile(wb, 'registro_produccion.xlsx');
+
+  // Reiniciar todo y regresar a login
+  tiempoMarcha = 0;
+  tiempoParada = 0;
+  document.getElementById("tiempoMarcha").textContent = "0 min";
+  document.getElementById("tiempoParada").textContent = "0 min";
+  tablaEventos.innerHTML = "";
+  document.querySelector("#historialTabla tbody").innerHTML = "";
+  localStorage.removeItem("tablaEventos");
+  localStorage.removeItem("tiempoMarcha");
+  localStorage.removeItem("tiempoParada");
+
+  
+  // Limpiar datos del turno
+  datosTurnoConfirmados = { mecanico: "", jefe: "", turno: "" };
+  document.getElementById("mecanico").selectedIndex = 0;
+  document.getElementById("jefe").selectedIndex = 0;
+  document.getElementById("turno").selectedIndex = 0;
+
+  document.getElementById("mainContainer").classList.remove("active");
+  document.getElementById("loginContainer").classList.add("active");
+}
+
+
+function exportarHistorial() {
+  const filas = document.querySelector("#historialTabla tbody").querySelectorAll("tr");
+  if (filas.length === 0) return;
+
+  const rows = [['Fecha', 'Mecánico', 'Jefe', 'Turno', 'Hora Parada', 'Hora Marcha', 'Justificación']];
+  filas.forEach(tr => {
+    const celdas = tr.querySelectorAll('td');
+    const fecha = new Date().toLocaleDateString();
+    const mecanico = datosTurnoConfirmados.mecanico;
+    const jefe = datosTurnoConfirmados.jefe;
+    const turno = celdas[0].textContent.trim();
+    const parada = celdas[1].textContent.trim();
+    const marcha = celdas[2].textContent.trim();
+    const justificacion = celdas[3].textContent.trim();
+    rows.push([fecha, mecanico, jefe, turno, parada, marcha, justificacion]);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Historial');
+  const fechaHora = new Date().toISOString().replace(/[:.]/g, '-');
+  XLSX.writeFile(wb, `historial_turno_${fechaHora}.xlsx`);
+
+  // Reiniciar todo y volver a login
+  tiempoMarcha = 0;
+  tiempoParada = 0;
+  document.getElementById("tiempoMarcha").textContent = "0 min";
+  document.getElementById("tiempoParada").textContent = "0 min";
+  tablaEventos.innerHTML = "";
+  document.querySelector("#historialTabla tbody").innerHTML = "";
+  localStorage.removeItem("tablaEventos");
+  localStorage.removeItem("tiempoMarcha");
+  localStorage.removeItem("tiempoParada");
+
+  
+  // Limpiar datos del turno
+  datosTurnoConfirmados = { mecanico: "", jefe: "", turno: "" };
+  document.getElementById("mecanico").selectedIndex = 0;
+  document.getElementById("jefe").selectedIndex = 0;
+  document.getElementById("turno").selectedIndex = 0;
+
+  document.getElementById("mainContainer").classList.remove("active");
+  document.getElementById("loginContainer").classList.add("active");
+}
+
+</script>
+<script>
+function toggleHistorial() {
+  const panel = document.getElementById("historialPanel");
+  panel.style.display = (panel.style.display === "none" ? "block" : "none");
+}
+
+function exportarExcel() {
+  const rows = [['Hora de Parada', 'Hora de Marcha', 'Duración (min)', 'Justificación']];
+  const filas = tablaEventos.querySelectorAll('tr');
+
+  filas.forEach(tr => {
+    const celdas = tr.querySelectorAll('td');
+    if (celdas.length >= 4) {
+      const parada = celdas[0].textContent.trim();
+      const marcha = celdas[1].textContent.trim();
+      const duracion = celdas[2].textContent.trim();
+      const justificacion = celdas[3].textContent.trim();
+      rows.push([parada, marcha, duracion, justificacion]);
+    }
+  });
+
+  rows.unshift([]);
+  rows.unshift(['Duración total en Parada (min)', Math.floor(tiempoParada / 60)]);
+  rows.unshift(['Duración total en Marcha (min)', Math.floor(tiempoMarcha / 60)]);
+  rows.unshift(['Turno', datosTurnoConfirmados.turno]);
+  rows.unshift(['Jefe', datosTurnoConfirmados.jefe]);
+  rows.unshift(['Mecánico', datosTurnoConfirmados.mecanico]);
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Eventos');
+  XLSX.writeFile(wb, 'registro_produccion.xlsx');
+
+  // Reiniciar todo y regresar a login
+  tiempoMarcha = 0;
+  tiempoParada = 0;
+  document.getElementById("tiempoMarcha").textContent = "0 min";
+  document.getElementById("tiempoParada").textContent = "0 min";
+  tablaEventos.innerHTML = "";
+  document.querySelector("#historialTabla tbody").innerHTML = "";
+  localStorage.removeItem("tablaEventos");
+  localStorage.removeItem("tiempoMarcha");
+  localStorage.removeItem("tiempoParada");
+
+  
+  // Limpiar datos del turno
+  datosTurnoConfirmados = { mecanico: "", jefe: "", turno: "" };
+  document.getElementById("mecanico").selectedIndex = 0;
+  document.getElementById("jefe").selectedIndex = 0;
+  document.getElementById("turno").selectedIndex = 0;
+
+  document.getElementById("mainContainer").classList.remove("active");
+  document.getElementById("loginContainer").classList.add("active");
+}
+
+
+function exportarHistorial() {
+  const filas = document.querySelector("#historialTabla tbody").querySelectorAll("tr");
+  if (filas.length === 0) return;
+
+  const rows = [['Fecha', 'Mecánico', 'Jefe', 'Turno', 'Hora Parada', 'Hora Marcha', 'Justificación']];
+  filas.forEach(tr => {
+    const celdas = tr.querySelectorAll('td');
+    const fecha = new Date().toLocaleDateString();
+    const mecanico = datosTurnoConfirmados.mecanico;
+    const jefe = datosTurnoConfirmados.jefe;
+    const turno = celdas[0].textContent.trim();
+    const parada = celdas[1].textContent.trim();
+    const marcha = celdas[2].textContent.trim();
+    const justificacion = celdas[3].textContent.trim();
+    rows.push([fecha, mecanico, jefe, turno, parada, marcha, justificacion]);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Historial');
+  const fechaHora = new Date().toISOString().replace(/[:.]/g, '-');
+  XLSX.writeFile(wb, `historial_turno_${fechaHora}.xlsx`);
+
+  // Reiniciar todo y volver a login
+  tiempoMarcha = 0;
+  tiempoParada = 0;
+  document.getElementById("tiempoMarcha").textContent = "0 min";
+  document.getElementById("tiempoParada").textContent = "0 min";
+  tablaEventos.innerHTML = "";
+  document.querySelector("#historialTabla tbody").innerHTML = "";
+  localStorage.removeItem("tablaEventos");
+  localStorage.removeItem("tiempoMarcha");
+  localStorage.removeItem("tiempoParada");
+
+  
+  // Limpiar datos del turno
+  datosTurnoConfirmados = { mecanico: "", jefe: "", turno: "" };
+  document.getElementById("mecanico").selectedIndex = 0;
+  document.getElementById("jefe").selectedIndex = 0;
+  document.getElementById("turno").selectedIndex = 0;
+
+  document.getElementById("mainContainer").classList.remove("active");
+  document.getElementById("loginContainer").classList.add("active");
+}
+
+</script>
