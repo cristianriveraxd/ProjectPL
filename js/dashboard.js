@@ -134,16 +134,28 @@ function registrarEvento(inicio, fin) {
 }
 
 // --- Exportar a Excel ----------------------------------------------
+// --- Exportar a Excel ----------------------------------------------
 document.getElementById('btnExport').addEventListener('click', () => {
+    // Validación: no permitir exportar si hay causales sin confirmar
+    const selectsActivos = document.querySelectorAll('#tablaEventos select.causal-select');
+
+    if (selectsActivos.length > 0) {
+        alert('Por favor confirma todas las causales antes de exportar el archivo.');
+        return; // Bloquea la exportación
+    }
+
+    // Datos para nombre del archivo
     const usuario = localStorage.getItem('usuario') || 'usuario';
     const jefe = localStorage.getItem('jefe') || 'jefe';
     const fecha = new Date().toISOString().slice(0, 10);
-    const nombreArchivo = `paradas_${usuario}_${fecha}_Jefe:${jefe}.xlsx`;
+    const nombreArchivo = `paradas_${usuario}_${fecha}_Jefe-${jefe}.xlsx`;
 
+    // Recolectar filas de la tabla
     const rows = [...document.querySelectorAll('#tablaEventos tr')]
-        .slice(1)
+        .slice(1) // Quitar encabezado
         .map(tr => [...tr.children].map(td => td.innerText));
 
+    // Crear y exportar archivo
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet([['#', 'Inicio', 'Fin', 'Duración', 'Causal'], ...rows]);
     XLSX.utils.book_append_sheet(wb, ws, 'Paradas');
