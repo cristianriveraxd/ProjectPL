@@ -1,8 +1,7 @@
 import cv2
 import numpy as np
 
-# Inicia la cámara (0 si es la cámara por defecto)
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture('01.mp4')
 
 # Lee el primer frame como referencia
 ret, frame1 = cap.read()
@@ -24,7 +23,7 @@ while True:
     
     movement_detected = False
     for contour in contours:
-        if cv2.contourArea(contour) > 500:  # Ajusta este valor según sensibilidad
+        if cv2.contourArea(contour) > 500:  
             movement_detected = True
             break
 
@@ -33,10 +32,10 @@ while True:
     else:
         print("⏸️ Rodillos detenidos")
 
-    # Mostrar (opcional)
+    
     cv2.imshow("Frame", frame2)
-    cv2.imshow("Delta", frame_delta)
-    cv2.imshow("Threshold", thresh)
+    #cv2.imshow("Delta", frame_delta)
+    #cv2.imshow("Threshold", thresh)
 
     frame1_gray = frame2_gray
 

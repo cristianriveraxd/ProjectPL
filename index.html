@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Inicio de Sesión</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body
+    class="bg-light d-flex align-items-center justify-content-center vh-100"
+  >
+    <div class="container">
+      <div class="row justify-content-center shadow rounded bg-white">
+        <!-- Imagen -->
+        <div class="col-md-6 d-none d-md-block p-0">
+          <img
+            src="img/logo.jpg"
+            alt="Login"
+            class="img-fluid h-100 w-100 object-fit-cover rounded-start"
+          />
+        </div>
+
+        <!-- Formulario -->
+        <div class="col-md-6 p-5">
+          <h3 class="mb-4 text-primary">Iniciar Sesión</h3>
+
+          <form id="loginForm">
+            <div class="mb-3">
+              <label for="usuario" class="form-label">Usuario</label>
+              <select id="usuario" class="form-select" required>
+                <option value="" selected disabled>
+                  Seleccione un usuario
+                </option>
+                <option value="Cristian Rivera">Cristian Rivera</option>
+                <option value="Valeria Mejía">Valeria Mejía</option>
+                <option value="Jhoymer Espinoza">Jhoymer Espinoza</option>
+                <option value="Fabian Hincapi">Fabian Hincapie</option>
+                <option value="Kevin Mendoza">Kevin Mendoza</option>
+                <option value="Oscar Rios">Oscar Rios</option>
+              </select>
+            </div>
+
+            <div class="mb-4">
+              <label for="jefe" class="form-label">Jefe</label>
+              <select id="jefe" class="form-select" required>
+                <option value="" selected disabled>Seleccione su jefe</option>
+                <option value="Carlos Duarte">Carlos Duarte</option>
+                <option value="Carlos Duarte">Carlos Ventura</option>
+                <option value="Carlos Duarte">Carlos Organista</option>
+                <option value="Diego Cañon">Diego Cañon</option>
+                <option value="Juan Sastoque">Juan Sastoque</option>
+                <option value="Nelson Guzman">Nelson Guzman</option>
+                <option value="Nelson Guzman">Wilson Salinas</option>
+              </select>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100">
+              Iniciar Sesión
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      document
+        .getElementById("loginForm")
+        .addEventListener("submit", function (e) {
+          e.preventDefault();
+          const usuario = document.getElementById("usuario").value;
+          const jefe = document.getElementById("jefe").value;
+
+          if (usuario && jefe) {
+            localStorage.setItem("usuario", usuario);
+            localStorage.setItem("jefe", jefe);
+            window.location.href = "dashboard.html";
+          }
+        });
+    </script>
+  </body>
+</html>
