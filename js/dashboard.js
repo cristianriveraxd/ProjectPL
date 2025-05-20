@@ -102,8 +102,8 @@ function registrarEvento(inicio, fin) {
     const duracion = new Date(duracionMs).toISOString().substr(11, 8); // hh:mm:ss
     console.log(`Minutos perdidos acumulados: ${minutosPerdidos}`);
 
-    const causales = ['Falla electrica', 'Falla mecanica', 'Cambio de formato no notificado', 'Producto sin sticker', 'Codificación de sticker', 'Secuencia de productos'
-        ,'Producto no conforme','Producto abierto','Formatos altos','Descarte','Bloqueo por chequeador de peso', 'Bloqueo en chequeador de peso'
+    const causales = ['Falla electrica', 'Falla mecanica', 'Falla de comunicación', 'Cambio de formato no notificado', 'Producto sin sticker', 'Codificación de sticker', 'Secuencia de productos'
+        ,'Producto no conforme','Producto abierto','Formatos altos','Descarte','Bloqueo por chequeador de peso', 'Bloqueo en chequeador de peso','Falla no documentada'
     ];
     const opciones = causales.map(causal => `<option value="${causal}">${causal}</option>`).join('');
 
@@ -197,8 +197,8 @@ function actualizarGraficaEficiencia() {
 
     const porcentaje = (minutosDisponibles / totalMinutosTurno) * 100;
 
-    if (porcentaje >= 80) color = '#0EA700';     // verde
-    else if (porcentaje >= 60) color = '#FF8322'; // naranja
+    if (porcentaje >= 87) color = '#0EA700';     // verde
+    else if (porcentaje >= 80) color = '#FF8322'; // naranja
     else color = '#FE0000';                       // rojo
 
     graficaEficiencia.data.datasets[0].data = [minutosDisponibles, minutosPerdidos];
