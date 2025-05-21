@@ -89,7 +89,11 @@ function actualizarEstado(nuevoEstado) {
         estadoBadge.textContent = 'Estado: Marcha';
         estadoBadge.classList.replace('bg-danger', 'bg-success');
         const horaMarcha = new Date();
-        registrarEvento(horaParada, horaMarcha);
+        const timeReal = (horaMarcha - horaParada)/1000;
+        
+        if (timeReal > 2 ){
+            registrarEvento(horaParada, horaMarcha);
+        }
         estadoActual = 'marcha';
     }
 }
@@ -103,7 +107,7 @@ function registrarEvento(inicio, fin) {
     console.log(`Minutos perdidos acumulados: ${minutosPerdidos}`);
 
     const causales = ['Falla electrica', 'Falla mecanica', 'Falla de comunicación', 'Cambio de formato no notificado', 'Producto sin sticker', 'Codificación de sticker', 'Secuencia de productos'
-        ,'Producto no conforme','Producto abierto','Formatos altos','Descarte','Bloqueo por chequeador de peso', 'Bloqueo en chequeador de peso','Falla no documentada'
+        , 'Producto no conforme', 'Producto abierto', 'Formatos altos', 'Descarte', 'Bloqueo por chequeador de peso', 'Bloqueo en chequeador de peso', 'Estibas no conformes', 'Falla no documentada'
     ];
     const opciones = causales.map(causal => `<option value="${causal}">${causal}</option>`).join('');
 
@@ -134,7 +138,6 @@ function registrarEvento(inicio, fin) {
 }
 
 // --- Exportar a Excel ----------------------------------------------
-// --- Exportar a Excel ----------------------------------------------
 document.getElementById('btnExport').addEventListener('click', () => {
     // Validación: no permitir exportar si hay causales sin confirmar
     const selectsActivos = document.querySelectorAll('#tablaEventos select.causal-select');
@@ -148,7 +151,7 @@ document.getElementById('btnExport').addEventListener('click', () => {
     const usuario = localStorage.getItem('usuario') || 'usuario';
     const jefe = localStorage.getItem('jefe') || 'jefe';
     const fecha = new Date().toISOString().slice(0, 10);
-    const nombreArchivo = `paradas_${usuario}_${fecha}_Jefe-${jefe}.xlsx`;
+    const nombreArchivo = `Paradas_Banda_PL_${usuario}_${fecha}_Jefe-${jefe}.xlsx`;
 
     // Recolectar filas de la tabla
     const rows = [...document.querySelectorAll('#tablaEventos tr')]
@@ -160,6 +163,8 @@ document.getElementById('btnExport').addEventListener('click', () => {
     const ws = XLSX.utils.aoa_to_sheet([['#', 'Inicio', 'Fin', 'Duración', 'Causal'], ...rows]);
     XLSX.utils.book_append_sheet(wb, ws, 'Paradas');
     XLSX.writeFile(wb, nombreArchivo);
+
+    cerrarSesion();
 });
 
 
