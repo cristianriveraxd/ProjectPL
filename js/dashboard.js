@@ -89,9 +89,9 @@ function actualizarEstado(nuevoEstado) {
         estadoBadge.textContent = 'Estado: Marcha';
         estadoBadge.classList.replace('bg-danger', 'bg-success');
         const horaMarcha = new Date();
-        const timeReal = (horaMarcha - horaParada)/1000;
-        
-        if (timeReal > 2 ){
+        const timeReal = (horaMarcha - horaParada) / 1000;
+
+        if (timeReal > 2) {
             registrarEvento(horaParada, horaMarcha);
         }
         estadoActual = 'marcha';
@@ -106,9 +106,25 @@ function registrarEvento(inicio, fin) {
     const duracion = new Date(duracionMs).toISOString().substr(11, 8); // hh:mm:ss
     console.log(`Minutos perdidos acumulados: ${minutosPerdidos}`);
 
-    const causales = ['Falla electrica', 'Falla mecanica', 'Falla de comunicación', 'Cambio de formato no notificado', 'Producto sin sticker', 'Codificación de sticker', 'Secuencia de productos'
-        , 'Producto no conforme', 'Producto abierto', 'Formatos altos', 'Descarte', 'Bloqueo por chequeador de peso', 'Bloqueo en chequeador de peso', 'Estibas no conformes', 'Falla no documentada'
+    const causales = [
+        'Bloqueo en chequeador de peso',
+        'Bloqueo por chequeador de peso',
+        'Cambio de formato no notificado',
+        'Codificación de sticker',
+        'Descarte',
+        'Estibas no conformes',
+        'Falla de comunicación',
+        'Falla electrica',
+        'Falla mecanica',
+        'Falla no documentada',
+        'Formatos altos',
+        'Posición de sticker',
+        'Producto abierto',
+        'Producto no conforme',
+        'Producto sin sticker',
+        'Secuencia de productos'
     ];
+
     const opciones = causales.map(causal => `<option value="${causal}">${causal}</option>`).join('');
 
     const fila = document.createElement('tr');
@@ -160,7 +176,21 @@ document.getElementById('btnExport').addEventListener('click', () => {
 
     // Crear y exportar archivo
     const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet([['#', 'Inicio', 'Fin', 'Duración', 'Causal'], ...rows]);
+    const minutosDisponibles = totalMinutosTurno - minutosPerdidos;
+    const porcentaje = ((minutosDisponibles / totalMinutosTurno) * 100).toFixed(2);
+    const horaActual = new Date().toLocaleString();
+
+    const filaResumen = [
+        ['FECHA DE REGISTRO', horaActual],
+        ['TIEMPO DISPONIBLE (min)', minutosDisponibles],
+        ['TIEMPO DETENIDO (min)', minutosPerdidos],
+        ['EFICIENCIA (%)', `${porcentaje}%`],
+        [],
+        ['#', 'Inicio', 'Fin', 'Duración', 'Causal'] // encabezado normal
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet([...filaResumen, ...rows]);
+
     XLSX.utils.book_append_sheet(wb, ws, 'Paradas');
     XLSX.writeFile(wb, nombreArchivo);
 
@@ -182,6 +212,8 @@ const graficaEficiencia = new Chart(ctx, {
         }]
     },
     options: {
+        responsive: true,
+        maintainAspectRatio: false,
         cutout: '75%',
         plugins: {
             legend: { display: false },
@@ -195,6 +227,7 @@ const graficaEficiencia = new Chart(ctx, {
         }
     }
 });
+
 
 function actualizarGraficaEficiencia() {
     const minutosDisponibles = totalMinutosTurno - minutosPerdidos;

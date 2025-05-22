@@ -12,7 +12,16 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="style.css" />
-     <link rel="icon" href="img/svg.svg" type="image/x-icon" />
+    <link rel="icon" href="img/svg.svg" type="image/x-icon" />
+
+    <style>
+      .grafica-wrapper {
+        width: 350px;
+        height: 350px;
+        margin: 0 auto; /* Centrado */
+        position: relative;
+      }
+    </style>
   </head>
   <body class="bg-light">
     <!-- Sidebar -->
@@ -25,7 +34,9 @@
             width="40"
             class="me-2 rounded-circle"
           />
-          <span class="fs-5 fw-bold text-primary">Productos Alimenticios Doria</span>
+          <span class="fs-5 fw-bold text-primary"
+            >Productos Alimenticios Doria</span
+          >
         </div>
 
         <!-- <ul class="nav flex-column">
@@ -152,8 +163,8 @@
                       <thead class="table-light sticky-top">
                         <tr>
                           <th>#</th>
-                          <th>Inicio Parada</th>
-                          <th>Fin Parada</th>
+                          <th>Hr parada</th>
+                          <th>Hr inicio</th>
                           <th>Duración</th>
                           <th>Causal</th>
                         </tr>
@@ -165,19 +176,19 @@
               </div>
             </div>
           </div>
-          
 
           <div class="tab-pane fade" id="tabEficiencia" role="tabpanel">
-             <h5 class="fw-bold mb-3">Grafica de disponibilidad</h5>
+            <h5 class="fw-bold mb-3">Grafica de disponibilidad</h5>
             <!-- Tarjeta de la gráfica -->
             <div class="col-lg-6 mx-auto mt-2">
               <div class="card p-2 shadow-sm text-center">
                 <h6 class="mb-3 fw-bold">Eficiencia de banda transportadora</h6>
-                <canvas
-                  id="graficaEficiencia"
-                  width="250"
-                  height="250"
-                ></canvas>
+
+                <div class="row g-3 mt-2">
+                  <div class="grafica-wrapper">
+                    <canvas id="graficaEficiencia"></canvas>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
