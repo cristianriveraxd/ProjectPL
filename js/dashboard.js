@@ -68,7 +68,7 @@ function detectarMovimiento() {
             const duracionParada = (horaMarcha - horaParada) / 60000; // minutos
             minutosPerdidos += duracionParada;
             const timeReal = (horaMarcha - horaParada) / 1000;
-            if (timeReal > 2) {
+            if (timeReal >= 2) {
                 actualizarGraficaEficiencia();
             }
             horaParada = null;
@@ -92,7 +92,7 @@ function actualizarEstado(nuevoEstado) {
         const horaMarcha = new Date();
         const timeReal = (horaMarcha - horaParada) / 1000;
 
-        if (timeReal > 2) {
+        if (timeReal >= 2) {
             registrarEvento(horaParada, horaMarcha);
         }
         estadoActual = 'marcha';
@@ -244,6 +244,3 @@ function actualizarGraficaEficiencia() {
     graficaEficiencia.data.datasets[0].backgroundColor[0] = color;
     graficaEficiencia.update();
 }
-
-
-
