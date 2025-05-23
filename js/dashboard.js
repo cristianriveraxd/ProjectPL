@@ -18,7 +18,7 @@ let video, canvas, context;
 let previousImageData = null;
 let estadoActual = 'marcha';
 let horaParada = null;
-const umbralSensibilidad = 8000; // Ajusta según tu cámara/escena
+const umbralSensibilidad = 8000;
 let indice = 0;
 const totalMinutosTurno = 480;
 let minutosPerdidos = 0;
@@ -65,11 +65,12 @@ function detectarMovimiento() {
         if (cambios >= umbralSensibilidad && estadoActual === 'parada') {
             actualizarEstado('marcha');
             const horaMarcha = new Date();
-            const duracionParada = Math.round((horaMarcha - horaParada) / 60000); // minutos
+            const duracionParada = (horaMarcha - horaParada) / 60000; // minutos
             minutosPerdidos += duracionParada;
-
-            actualizarGraficaEficiencia();
-
+            const timeReal = (horaMarcha - horaParada) / 1000;
+            if (timeReal > 2) {
+                actualizarGraficaEficiencia();
+            }
             horaParada = null;
             estadoActual = 'marcha';
         }
@@ -149,7 +150,7 @@ function registrarEvento(inicio, fin) {
         const td = document.createElement('td');
         td.textContent = valorSeleccionado;
         td.classList.add('bg-light');
-        this.parentNode.replaceWith(td); // Reemplaza el <td> que contenía el <select> por uno fijo
+        this.parentNode.replaceWith(td);
     });
 }
 
