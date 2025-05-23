@@ -20,6 +20,7 @@ let estadoActual = 'marcha';
 let horaParada = null;
 const umbralSensibilidad = 8000;
 let indice = 0;
+const segundosPerdidos = 0;
 const totalMinutosTurno = 480;
 let minutosPerdidos = 0;
 let tiempoInicioParada = null;
@@ -177,14 +178,19 @@ document.getElementById('btnExport').addEventListener('click', () => {
 
     // Crear y exportar archivo
     const wb = XLSX.utils.book_new();
-    const minutosDisponibles = totalMinutosTurno - minutosPerdidos;
-    const porcentaje = ((minutosDisponibles / totalMinutosTurno) * 100).toFixed(2);
+
+    // Calcular segundos disponibles y porcentaje
+    const segundosTotalesTurno = totalMinutosTurno * 60;
+    const segundosPerdidos = minutosPerdidos * 60;
+    const segundosDisponibles = segundosTotalesTurno - segundosPerdidos;
+    const porcentaje = ((segundosDisponibles / segundosTotalesTurno) * 100).toFixed(2);
+
     const horaActual = new Date().toLocaleString();
 
     const filaResumen = [
         ['FECHA DE REGISTRO', horaActual],
-        ['TIEMPO DISPONIBLE (min)', minutosDisponibles],
-        ['TIEMPO DETENIDO (min)', minutosPerdidos],
+        ['TIEMPO DISPONIBLE', formatearSegundos(segundosDisponibles)],
+        ['TIEMPO DETENIDO', formatearSegundos(segundosPerdidos)],
         ['EFICIENCIA (%)', `${porcentaje}%`],
         [],
         ['#', 'Inicio', 'Fin', 'Duración', 'Causal'] // encabezado normal
@@ -221,15 +227,19 @@ const graficaEficiencia = new Chart(ctx, {
             tooltip: {
                 callbacks: {
                     label: function (context) {
-                        return `${context.label}: ${context.raw} minutos`;
+                        const minutos = context.raw;
+                        const minutosEnteros = Math.floor(minutos);
+                        const segundos = Math.round((minutos - minutosEnteros) * 60);
+                        return `${context.label}: ${minutosEnteros} min ${segundos} seg`;
                     }
                 }
             }
+
         }
     }
 });
 
-
+// --- Función para actualizar grafica por tiempo y colores dependiendo disponibilidad
 function actualizarGraficaEficiencia() {
     const minutosDisponibles = totalMinutosTurno - minutosPerdidos;
     let color;
@@ -240,7 +250,25 @@ function actualizarGraficaEficiencia() {
     else if (porcentaje >= 80) color = '#FF8322'; // naranja
     else color = '#FE0000';                       // rojo
 
-    graficaEficiencia.data.datasets[0].data = [minutosDisponibles, minutosPerdidos];
+    graficaEficiencia.data.datasets[0].data = [
+        minutosDisponibles,
+        minutosPerdidos
+    ];
     graficaEficiencia.data.datasets[0].backgroundColor[0] = color;
     graficaEficiencia.update();
+}
+
+// --- Función para formatear minutos
+function formatearMinutos(minutos) {
+    const minutosEnteros = Math.floor(minutos);
+    const segundos = Math.round((minutos - minutosEnteros) * 60);
+    return `${minutosEnteros} min ${segundos} seg`;
+}
+
+// --- Función para formatear segundos a hh:mm:ss --------------------
+function formatearSegundos(segundos) {
+    const hrs = Math.floor(segundos / 3600);
+    const mins = Math.floor((segundos % 3600) / 60);
+    const segs = Math.floor(segundos % 60);
+    return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${segs.toString().padStart(2, '0')}`;
 }
